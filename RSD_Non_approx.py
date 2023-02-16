@@ -84,7 +84,7 @@ def phase(inp):
 
 #Simulation Control variables
 
-signal_size = 32 # Size of visualization
+signal_size = 64 # Size of visualization
 dx = dy = 0.04/signal_size #Pixel Size
 dx_out = dy_out = 0.04/signal_size
 M = N = signal_size # Control of the size of the matrices
