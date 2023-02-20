@@ -84,7 +84,7 @@ def phase(inp):
 
 #Simulation Control variables
 
-signal_size = 64 # Size of visualization
+signal_size = 128 # Size of visualization
 dx = dy = 0.04/signal_size #Pixel Size
 dx_out = dy_out = 0.04/signal_size
 M = N = signal_size # Control of the size of the matrices
@@ -104,7 +104,7 @@ k = 2*pi/wavelength # Wave number of the ilumination source
 
 z = -1 # Z Component of the Source's coordinates 
 SourceZ = np.array([0,0,z]) # Coordinates of the source
-output_z = 0.01 # Z Component of the observation screen coordinates
+output_z = 0.001   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
 
@@ -137,38 +137,24 @@ y_cord_out = np.linspace(-dy_out*int(M/2) , dy_out*int(M/2) , num = M)
 Z_out = output_z*np.ones_like(X_out)
 
 
-r01_X = X_inp-np.transpose(X_out)
-r01_Y = Y_inp-np.transpose(Y_out)
-r01_Z = Z_inp-np.transpose(Z_out)
 
-# imageShow(r01_X,'X component r01')
-# imageShow(r01_Y,'Y component r01')
-# imageShow(r01_Z,'Z component r01')
+
 
 start = time.time()
 # The first pair of loops ranges over the points in the viewing screen in order to determine r01
 for x_sample in range(N):
+    x_fis_out = X_inp[1,x_sample]
     for y_sample in range(M):
-
+        y_fis_out = Y_inp[y_sample,1]
         # pdb.set_trace()
         # print(U1)
-
+        
         U1with_phase = U1.copy()
+        mr01 = np.sqrt(np.power(X_out-x_fis_out,2)+np.power(Y_out-y_fis_out,2)+(Input_Z-output_z)**2)
+        Obliquity = (Input_Z-output_z)**2 / mr01
+        kernel = np.exp(1j * k * mr01)/mr01
+        U0[y_sample,x_sample] = np.sum(U1with_phase * kernel * Obliquity * dx * dy)
         # The second pair of loops ranges over the points in the apperture to determine r21
-        for x_holo in range(N):
-            for y_holo in range(M):                
-
-
-                r01 = [r01_X[x_sample,x_holo],r01_Y[y_sample,y_holo],Input_Z-output_z]
-                mr01 = np.sqrt(r01[0]**2 + r01[1]**2 + r01[2]**2)
-                
-                '''By knowing the geometrical parameters of the system, the following two lines compute the weight of
-                each point source in the input plane to form the output.
-                '''
-                # pdb.set_trace()
-                U1with_phase[y_holo,x_holo] = U1with_phase[y_holo,x_holo] * (r01[2]/mr01)
-                U1with_phase[y_holo,x_holo] = U1with_phase[y_holo,x_holo] * np.exp(mr01*1j*k)/mr01
-                U0[y_sample,x_sample] = U0[y_sample,x_sample] + (dx*dy) * U1with_phase[y_holo,x_holo]
 
 
 
