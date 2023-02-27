@@ -84,7 +84,7 @@ def phase(inp):
 
 #Simulation Control variables
 
-signal_size = 128 # Size of visualization
+signal_size = 64 # Size of visualization
 dx = dy = 0.04/signal_size #Pixel Size
 dx_out = dy_out = 0.04/signal_size
 M = N = signal_size # Control of the size of the matrices
@@ -104,7 +104,7 @@ k = 2*pi/wavelength # Wave number of the ilumination source
 
 z = -1 # Z Component of the Source's coordinates 
 SourceZ = np.array([0,0,z]) # Coordinates of the source
-output_z = 0.001   # Z Component of the observation screen coordinates
+output_z = 0.01   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
 
