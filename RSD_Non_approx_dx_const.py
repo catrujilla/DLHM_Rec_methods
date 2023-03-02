@@ -56,6 +56,7 @@ def imageShow (inp, title,limits):
     plt.imshow(inp, cmap='gray',extent=limits), plt.title(title)  # image in gray scale
     plt.show()  # show image
 
+
     return
 
 def amplitude (inp, log):
@@ -82,8 +83,7 @@ def phase(inp):
     out = np.angle(inp)+np.pi
     return(out)
 
-
-def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
+def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out,Output_shape):
     '''
     # SOME COMMENTS ARE MISSING HERE
 
@@ -107,7 +107,7 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
     output_z = z
     Input_Z = 0 # Z Component of the aperture coordinates
 
-    U0 = np.zeros((M,N),dtype='complex_')
+    U0 = np.zeros(Output_shape,dtype='complex_')
     U1 = Field_Input  #This will be the hologram plane 
     x_inp_lim = dx*int(N/2)
     y_inp_lim = dy*int(M/2)
@@ -119,25 +119,25 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
     
 
 
-    x_out_lim = dx_out*int(N/2)
-    y_out_lim = dy_out*int(M/2)
+    x_out_lim = dx_out*int(Output_shape[0]/2)
+    y_out_lim = dy_out*int(Output_shape[1]/2)
 
-    x_cord_out = np.linspace(-dx_out*int(N/2) , dx_out*int(N/2) , num = N)
-    y_cord_out = np.linspace(-dy_out*int(M/2) , dy_out*int(M/2) , num = M)
+    x_cord_out = np.linspace(-x_out_lim , x_out_lim , num = Output_shape[0])
+    y_cord_out = np.linspace(-y_out_lim , y_out_lim , num = Output_shape[1])
 
     [X_out,Y_out] = np.meshgrid(x_cord_out,y_cord_out)
     
     # The first pair of loops ranges over the points in the viewing screen in order to determine r01
-    for x_sample in range(N):
-        x_fis_out = X_inp[1,x_sample]
-        for y_sample in range(M):
-            y_fis_out = Y_inp[y_sample,1]
+    for x_sample in range(Output_shape[0]):
+        x_fis_out = X_out[1,x_sample]
+        for y_sample in range(Output_shape[1]):
+            y_fis_out = Y_out[y_sample,1]
             # pdb.set_trace()
             # print(U1)
             
             U1with_phase = U1.copy()
-            mr01 = np.sqrt(np.power(X_out-x_fis_out,2)+np.power(Y_out-y_fis_out,2)+(Input_Z-output_z)**2)
-            Obliquity = (Input_Z-output_z)**2 / mr01
+            mr01 = np.sqrt(np.power(X_inp-x_fis_out,2)+np.power(Y_inp-y_fis_out,2)+(Input_Z-output_z)**2)
+            Obliquity = (Input_Z-output_z) / mr01
             kernel = np.exp(1j * k * mr01)/mr01
             U0[y_sample,x_sample] = np.sum(U1with_phase * kernel * Obliquity * dx * dy)
             # The second pair of loops ranges over the points in the apperture to determine r21
@@ -145,16 +145,31 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
     Viewing_window = [-x_out_lim,x_out_lim,-y_out_lim,y_out_lim]
     return U0,Viewing_window
 
+def plotea(Aperture,U0,limits_in,limits_out):
+    fig, axs = plt.subplots(2, 2)
+
+
+
+
+    axs[0,0].imshow(amplitude(Aperture,'False'), cmap='gray',extent=limits_in)
+    axs[0,1].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
+    axs[1,0].imshow(intensity(U0,'False'), cmap='gray',extent=limits_out)
+    fig.show()
+
+    return fig
+
+
 #Simulation Control variables
 
-signal_size = 128 # Size of visualization
-dx = dy = 0.04/signal_size #Pixel Size
-dx_out = dy_out = 0.001/signal_size
-M = N = signal_size # Control of the size of the matrices
+signal_size_in = 128 # Size of visualization
+signal_size_out = 128 # Size of visualization
+dx = dy = 0.04/signal_size_in #Pixel Size
+dx_out = dy_out = dx
+M = N = signal_size_in # Control of the size of the matrices
 
-x_center = signal_size/2# Optical...
-y_center = signal_size/2# ...axis of the system
-radius = 0.005 # Radius of the aperture in meters
+x_center = signal_size_in/2# Optical...
+y_center = signal_size_in/2# ...axis of the system
+radius = 0.002 # Radius of the aperture in meters
 Pradius = int(radius/dx) #Radius of the aperture in pixels
 
 x_inp_lim = dx*int(N/2)
@@ -170,23 +185,29 @@ k = 2*pi/wavelength # Wave number of the ilumination source
 
 z = -1 # Z Component of the Source's coordinates 
 SourceZ = np.array([0,0,z]) # Coordinates of the source
-output_z = 1   # Z Component of the observation screen coordinates
+output_z = 10   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
 
 # Aperture defines the geometry of the apperture, for circular apperture use circ2D, for rectangular apperture use rect2D
 
-Aperture = circ2D(signal_size,Pradius,center=None) 
+Aperture = circ2D(signal_size_in,Pradius,center=None) 
 # Aperture = rect2D(signal_size,10,10,center=None)
 
 
 U1 = Aperture.copy()
 
-U0,VW = RS1(U1,output_z,wavelength,[dx,dy],[dx_out,dy_out])
+U0,VW = RS1(U1,output_z,wavelength,[dx,dy],[dx_out,dy_out],[signal_size_out,signal_size_out])
 
 
 # Finally, the code plots the amplitude of the diffraction pattern
+
+# fig, axs = plt.subplots(2, 2)
+
+
+
+# plotea(Aperture,U0)
 imageShow(amplitude(Aperture,'False'),'Aperture (Coordinates in [m])',[-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim])
 imageShow(intensity(U0,False),('Diffraction Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])' ),VW)
-
+imageShow(amplitude(U0,False),('Amplitude Diffraction Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])' ),VW)
 
