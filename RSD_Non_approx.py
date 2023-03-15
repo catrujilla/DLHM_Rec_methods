@@ -253,7 +253,7 @@ M = N = signal_size # Control of the size of the matrices
 
 x_center = signal_size/2# Optical...
 y_center = signal_size/2# ...axis of the system
-radius = 0.0005 # Radius of the aperture in meters
+radius = 0.0001 # Radius of the aperture in meters
 Pradius = int(radius/dx) #Radius of the aperture in pixels
 
 x_inp_lim = dx*int(N/2)
@@ -267,7 +267,7 @@ k = 2*pi/wavelength # Wave number of the ilumination source
 
 
 
-output_z = 0.100   # Z Component of the observation screen coordinates in m
+output_z = 1e-2   # Z Component of the observation screen coordinates in m
 Illuz = 0.002 # Z Component of the aperture coordinates
 
 
@@ -294,17 +294,17 @@ Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + Illuz**2)
 
 AS = angularSpectrum(Aperture,output_z,wavelength,dx,dy)
 start = time.time()
-U0,VW = RS1(Aperture,output_z,wavelength,[dx,dy],[dx_out,dy_out])
+U0,VW = RS1_size_variable(U1,output_z,wavelength,[dx,dy],[128,128])
 end = time.time()
 delta = end-start
 print('El tiempo de ejecucion es: ',delta)
 # U0,VW = RS1_size_variable(Aperture,output_z,wavelength,[dx,dy],[dx_out,dy_out],[2*signal_size,2*signal_size])
 
 VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
-figure = plotea(AS,U0,VW_in,VW)
+figure = plotea(U1,U0,VW_in,VW)
 
 
 
-
+Aperture,output_z,wavelength,[dx,dy],[dx_out,dy_out]
 
 

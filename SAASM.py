@@ -4,15 +4,17 @@ Code developed by Tomás Vélez Acosta
 
 from math import pi
 import numpy as np
-import math as mt
-import pdb
 import time
+from PIL import Image
 from matplotlib import pyplot as plt
 
 def ftx(input):
     fts = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(input)))
     return fts
 
+def phase(inp):
+    out = np.angle(inp)+np.pi
+    return(out)
 
 def iftx(input):
     fts = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(input)))
@@ -99,16 +101,16 @@ def SAASM(field, z, wavelength, pixel_pitch_in ,pixel_pitch_out):
     # dx/dy - sampling pitches
     '''
     k_wl = 2 * pi / wavelength
-    
+    if z<0:
+        field = np.flip(field)
 
     M, N = field.shape
     x = np.arange(0, N, 1)  # array x
     fx = np.fft.fftshift(np.fft.fftfreq(N,pixel_pitch_in[0]))
-    fx_out = np.fft.fftshift(np.fft.fftfreq(N,pixel_pitch_out[0]))
 
     y = np.arange(0, M, 1)  # array y
     fy = np.fft.fftshift(np.fft.fftfreq(M,pixel_pitch_in[1]))
-    fy_out = np.fft.fftshift(np.fft.fftfreq(M,pixel_pitch_out[1]))
+
 
     X_in, Y_in = np.meshgrid((x - (N / 2))*pixel_pitch_in[0], (y - (M / 2))*pixel_pitch_in[1], indexing='xy')
     X_out,Y_out = np.meshgrid((x - (N / 2))*pixel_pitch_out[0], (y - (M / 2))*pixel_pitch_out[1], indexing='xy')
@@ -117,12 +119,10 @@ def SAASM(field, z, wavelength, pixel_pitch_in ,pixel_pitch_out):
     KY = FY * 2 * pi
 
 
-    FX_out, FY_out = np.meshgrid(fx_out, fy_out, indexing='xy')
     
     MR_in = (X_in**2 + Y_in**2)
-    MF = np.sqrt(FX**2 + FY**2)
     MK = np.sqrt(KX**2 + KY**2)
-    MF_out = np.sqrt(FX_out**2 + FY_out**2)
+    
     
     
     kmax = np.amax(MK)
@@ -147,7 +147,7 @@ def SAASM(field, z, wavelength, pixel_pitch_in ,pixel_pitch_out):
     h = spherical_ideal - taylor_no_sup
 
     
-    alpha = np.exp(-1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR_in)/(4*d*z))
+    alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR_in)/(4*d*z))
 
     kernel = np.exp(-1j * d * z * np.power(Mbeta,2)/(kmax))
     
@@ -156,20 +156,36 @@ def SAASM(field, z, wavelength, pixel_pitch_in ,pixel_pitch_out):
 
     E_out = iftx(ftx(ftx(np.divide(field,alpha)) * kernel) * np.exp(1j * z * h))
     
+
 	
     return E_out
 
+def plotea(U1,U0,limits_in,limits_out):
+    fig,axs = plt.subplots(1, 2)
+    # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
+    # axs = gs.subplots(sharex=False, sharey=True)
+    axs[0].imshow(intensity(U1,'False'), cmap='gray')
+    axs[0].set_title('Input')
+    # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
+    # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
+    axs[1].imshow(intensity(U0,False), cmap='gray',extent=limits_out)
+    axs[1].set_title('SAASM \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
+    plt.subplots_adjust(wspace=0.171)
+    plt.show()
+
+    return fig
 
 
 
 signal_size = 1024 # Size of visualization
-dx = dy = 0.04/signal_size #Pixel Size
-dx_out = dy_out = 0.04/signal_size
+Magn = 1e0
+dx = dy = 3.3e-6 #Pixel Size
+dx_out = dy_out = dx/Magn
 M = N = signal_size # Control of the size of the matrices
 
 x_center = signal_size/2# Optical...
 y_center = signal_size/2# ...axis of the system
-radius = 0.0005 # Radius of the aperture in meters
+radius = 5e-5 # Radius of the aperture in meters
 Pradius = int(radius/dx) #Radius of the aperture in pixels
 
 x_inp_lim = dx*int(N/2)
@@ -177,29 +193,37 @@ y_inp_lim = dy*int(M/2)
 
 
 # Light source+
-wavelength = 6.328e-7 # Wavelength of the illumination Source
+wavelength = 4.52e-7 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
 
 
 
-
-output_z = 0.1   # Z Component of the observation screen coordinates
+output_z = 2.5e-2   # Z Component of the observation screen coordinates
+# output_z = -2.5e-2   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
 
 # Aperture defines the geometry of the apperture, for circular apperture use circ2D, for rectangular apperture use rect2D
 
-Aperture = circ2D(signal_size,Pradius,center=None) 
-# Aperture = rect2D(signal_size,10,10,center=None)
+ 
 
 
-U1 = Aperture.copy()
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre VII\Advanced Project I\Holograms\0106\USINTFINraw.png").convert('L')
+# im = circ2D(signal_size,Pradius,center=None)
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
+
+im = im.resize((signal_size,signal_size))
+im = np.asarray(im)/255
+
+U1 = im.copy()
 
 
-U0 = SAASM(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
+U0_temp = SAASM(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
+U0 = SAASM(U0_temp, -output_z, wavelength, [dx_out,dy_out],[dx,dy])
 VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
 
-imageShow(intensity(U0,False),'Diffraction pattern')
+plotea(U0_temp,U0,VW_in,VW_in)
 
 
 
