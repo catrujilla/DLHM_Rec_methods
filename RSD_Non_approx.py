@@ -45,13 +45,16 @@ def circ2D(size, pradius, center=None):
                 data[i,j] = 1
     return data
 
-def imageShow (inp, title,limits):
+def imageShow (inp, title,limits = None):
     '''
     # Function to display an image
     # Inputs:
     # inp - The input complex field
     # title - The title of the displayed image        
     '''
+    M,N = np.shape(inp)
+    if all (limits == None):
+        limits = [0,N,0,M]
     plt.imshow(inp, cmap='gray',extent=limits), plt.title(title)  # image in gray scale
     plt.show()  # show image
 
@@ -148,8 +151,9 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
             mr01 = np.sqrt(np.power(X_inp-x_fis_out,2)+np.power(Y_inp-y_fis_out,2)+(output_z)**2)
             Obliquity = (output_z)/ mr01
             kernel = np.exp(1j * k * mr01)/mr01
-            U0[y_sample,x_sample] = np.sum(U1 * kernel * Obliquity * ds)
-    U0 = U0 /(1j*wavelength)
+            dif = 1j*k+(1/mr01)
+            U0[y_sample,x_sample] = np.sum(U1 * dif * kernel * Obliquity * ds)
+    # U0 = U0 /(1j*wavelength)
     # U0 = U0 / (-2*pi)
     Viewing_window = [-x_out_lim,x_out_lim,-y_out_lim,y_out_lim]
     return U0,Viewing_window
@@ -243,13 +247,21 @@ def angularSpectrum(field, z, wavelength, dx, dy):
 	
     return out
 
-#Simulation Control variables
+# Light source
+wavelength = 4.05e-07 # Wavelength of the illumination Source
+k = 2*pi/wavelength # Wave number of the ilumination source
 
-signal_size = 128  # Size of visualization 
-Magn = 20
+#Simulation Control variables
+L = 5e-3
+output_z = 2e-3   # Z Component of the observation screen coordinates in m
+signal_size = 256  # Size of visualization 
+Magn = np.abs(L/output_z)
 dx = dy = 3.3e-6 #Pixel Size
 dx_out = dy_out =  dx/Magn
 M = N = signal_size # Control of the size of the matrices
+zcrit = np.sqrt(4*dx**2 - wavelength**2)*(N*dx + N*dx_out)/wavelength
+
+print('La distancia crítica de propagación es: ', zcrit, 'm')
 
 x_center = signal_size/2# Optical...
 y_center = signal_size/2# ...axis of the system
@@ -260,15 +272,12 @@ x_inp_lim = dx*int(N/2)
 y_inp_lim = dy*int(M/2)
 
 
-# Light source
-wavelength = 4.05e-07 # Wavelength of the illumination Source
-k = 2*pi/wavelength # Wave number of the ilumination source
 
 
 
 
-output_z = 1e-3   # Z Component of the observation screen coordinates in m
-Illuz = 0.002 # Z Component of the aperture coordinates
+
+
 
 
 # Aperture defines the geometry of the apperture, for circular apperture use circ2D, for rectangular apperture use rect2D
@@ -277,24 +286,32 @@ Aperture = circ2D(signal_size,Pradius,center=None)
 # Aperture = rect2D(signal_size,10,10,center=None)
 
 
-U1 = Aperture.copy()
 
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
-im = im.resize((signal_size,signal_size))
+# im = im.resize((signal_size,signal_size))
 im = np.asarray(im)/255
+
+
+
+
 
 x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
 y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
-Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + Illuz**2)
-# illumination = np.exp(1j * k * Rinp)/Rinp 
-# im = im * illumination
+Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (L-output_z)**2)
+
+ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
+
+
+# U1 = Aperture.copy()
+U1 = im.copy() *ill
 
 
 AS = angularSpectrum(Aperture,output_z,wavelength,dx,dy)
 start = time.time()
-U0,VW = RS1_size_variable(U1,output_z,wavelength,[dx,dy],[256,256])
+U0,VW = RS1(im,output_z,wavelength,[dx,dy],[dx,dy])
 end = time.time()
 delta = end-start
 print('El tiempo de ejecucion es: ',delta)

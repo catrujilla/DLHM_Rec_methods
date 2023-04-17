@@ -7,6 +7,7 @@ import numpy as np
 import time
 from PIL import Image
 from matplotlib import pyplot as plt
+from scipy.interpolate import RegularGridInterpolator
 
 def ftx(input):
     fts = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(input)))
@@ -154,14 +155,36 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     Mbeta = np.sqrt(np.power(bX,2)+np.power(bY,2))
     
 
-    ''' IN THIS STEP THE FIRST FOURIER TRANSFORM OF THE FIELD IS CALCULATED DOING A RESAMPLE USING THE
-    FOURIER TRASNSFORM AND A PADDING. THIS TRANSFORM HAS AS OUTPUT COORDINATE THE SCALED COORDINATE
+    ''' IN THIS STEP THE FIRST FOURIER TRANSFORM OF THE FIELD IS CALCULATED DOING A RESAMPLING USING THE
+    FAST FOURIER TRASNSFORM AND A PADDING. THIS TRANSFORM HAS AS OUTPUT COORDINATE THE SCALED COORDINATE
     BETA, THAT IS NOT RELEVANT FOR THIS STEP BUT THE NEXT ONE'''
     # Initial interpolation for j=1
     max_grad_alpha = -kmax/(2*d*z) * np.amax(MR_in)
     pp1 = np.pi * pp0 /(pp0*max_grad_alpha+2*np.pi)
     alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR_in)/(4*d*z))
+
+    #Interpolation of the input field Scipy
+    xin = (x - (N / 2))*pp0
+    yin = (y - (M / 2))*pp0
+    N2 = int(N*(2+max_grad_alpha*pp0/np.pi))
+    M2 = int(M*(2+max_grad_alpha*pp0/np.pi))
+    x1 = np.arange(0, N2-1, 1)
+    y1 = np.arange(0, M2-1, 1)
+    
+
+    X1,Y1 = np.meshgrid((x1 - (N2 / 2))*pp1, (y1 - (M2 / 2))*pp1,indexing='ij')
+    inter = RegularGridInterpolator((xin,yin),field,bounds_error=False, fill_value=None)
+    E_interpolated = inter((X1,Y1))
+    FE = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(E_interpolated)))
+    MR1 = (X1**2 + Y1**2)
+    # alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR1)/(4*d*z))
+
+    # Interpolation using FFT
     E_interpolated,alpha = resample(field,max_grad_alpha,[pp0,pp0],Gamma=alpha)
+    E_interpolated = E_interpolated - np.amin(E_interpolated)
+    E_interpolated = E_interpolated/np.amax(E_interpolated)
+
+
     # Computation of the j=1 step
     FE1 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift((np.divide(E_interpolated,alpha)))))
     #Slicing of the input field in the inner region where the field is valid
@@ -177,8 +200,8 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     max_grad_kernel = np.amax(Mbeta)
     pp2 = np.pi * pp1 /(pp1*max_grad_kernel+2*np.pi)
     pad2 = [int(np.shape(FE1)[0]*(1+max_grad_kernel*pp1/np.pi)/2),int(np.shape(FE1)[1]*(1+max_grad_kernel*pp1/np.pi)/2)]
-    # E2 = np.pad(FE1,((pad2[0],pad2[0]),(pad2[1],pad2[1])),'constant',constant_values=0)
-    E2 = FE1
+    E2 = np.pad(FE1,((pad2[0],pad2[0]),(pad2[1],pad2[1])),'constant',constant_values=np.mean(FE1))
+    # E2 = FE1
     
 
 
@@ -196,8 +219,8 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
 
 
     FE2 = ftx(E2*kernel)
-    half_size2 = [int(np.shape(FE2)[0]/2),int(np.shape(FE2)[1]/2)]
-    # FE2 = FE2[half_size2[0]-int(M/2):half_size2[0]+int(M/2),half_size2[1]-int(N/2):half_size2[1]+int(N/2)]
+    # half_size2 = [int(np.shape(FE2)[0]/2),int(np.shape(FE2)[1]/2)]
+    # FE2 = FE2[half_size2[0]-int(M2/2):half_size2[0]+int(M/2),half_size2[1]-int(N2/2):half_size2[1]+int(N/2)]
 
     
 
@@ -285,7 +308,7 @@ wavelength = 6.32e-7 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
 
 
-output_z = 9e-3   # Z Component of the observation screen coordinates
+output_z = 8e-3   # Z Component of the observation screen coordinates
 # output_z = 2.5e-2   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
