@@ -177,10 +177,10 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     E_interpolated = inter((X1,Y1))
     FE = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(E_interpolated)))
     MR1 = (X1**2 + Y1**2)
-    # alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR1)/(4*d*z))
+    alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR1)/(4*d*z))
 
     # Interpolation using FFT
-    E_interpolated,alpha = resample(field,max_grad_alpha,[pp0,pp0],Gamma=alpha)
+    # E_interpolated,alpha = resample(field,max_grad_alpha,[pp0,pp0],Gamma=alpha)
     E_interpolated = E_interpolated - np.amin(E_interpolated)
     E_interpolated = E_interpolated/np.amax(E_interpolated)
 
@@ -189,8 +189,11 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     FE1 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift((np.divide(E_interpolated,alpha)))))
     #Slicing of the input field in the inner region where the field is valid
     half_size1 = [int(np.shape(FE1)[0]/2),int(np.shape(FE1)[1]/2)]
-    FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
-    
+
+
+    # ----------------------CLIPPING OF THE FIELD----------------------------- 
+    # FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
+    FE1 = FE1[200:820,200:820] 
     
 
     '''IN THIS STEP THE SECOND FOURIER TRANSFORM IS CALCULATED. HERE THE COORDINATES BETA ARE RELEVANT
@@ -285,6 +288,20 @@ def plotea(U1,U0):
 
     return fig
 
+def ishow(Field):
+    fig,axs = plt.subplots(1, 2)
+    # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
+    # axs = gs.subplots(sharex=False, sharey=True)
+    axs[0].imshow(intensity(Field,'False'), cmap='gray')
+    axs[0].set_title('Intensity')
+    # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
+    # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
+    axs[1].imshow(phase(Field), cmap='gray')
+    axs[1].set_title('Phase')
+    plt.subplots_adjust(wspace=0.171)
+    plt.show()
+
+    return fig
 
 
 
@@ -308,7 +325,7 @@ wavelength = 6.32e-7 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
 
 
-output_z = 8e-3   # Z Component of the observation screen coordinates
+output_z = 7e-3   # Z Component of the observation screen coordinates
 # output_z = 2.5e-2   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 

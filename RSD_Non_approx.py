@@ -6,7 +6,6 @@ from math import pi
 import numpy as np
 from matplotlib import pyplot as plt
 from PIL import Image
-import cv2 as cv
 import time
 
 def rect2D(size, width_x, width_y, center=None):
@@ -84,16 +83,40 @@ def phase(inp):
     out = np.angle(inp)+np.pi
     return(out)
 
-def plotea(Aperture,U0,limits_in,limits_out):
+def ploty(Input,Output,VWI,VWO):
+
+    fig,axs = plt.subplots(2, 2)
+
+    axs[0,0].imshow(intensity(Input,'False'), cmap='gray',extent=VWI)
+    axs[0,0].set_title('Input Intensity')
+    
+
+    axs[0,1].imshow(phase(Input), cmap='gray',extent=VWI)
+    axs[0,1].set_title('Input Phase')
+
+    axs[1,0].imshow(intensity(Output,'False'), cmap='gray',extent=VWO)
+    axs[1,0].set_title('Output Intensity')
+
+
+    axs[1,1].imshow(phase(Output), cmap='gray',extent=VWO)
+    axs[1,1].set_title('Output Phase')
+
+    plt.subplots_adjust(wspace=0.2)
+    plt.subplots_adjust(hspace=0.4)
+    plt.show()
+
+    return fig
+
+def ishow(Field):
     fig,axs = plt.subplots(1, 2)
     # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
     # axs = gs.subplots(sharex=False, sharey=True)
-    axs[0].imshow(intensity(Aperture,'False'), cmap='gray',extent=limits_in)
-    axs[0].set_title('Angular Spectrum')
+    axs[0].imshow(intensity(Field,'False'), cmap='gray')
+    axs[0].set_title('Intensity')
     # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
     # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
-    axs[1].imshow(intensity(U0,'False'), cmap='gray',extent=limits_out)
-    axs[1].set_title('RS1 \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
+    axs[1].imshow(phase(Field), cmap='gray')
+    axs[1].set_title('Phase')
     plt.subplots_adjust(wspace=0.171)
     plt.show()
 
@@ -102,8 +125,6 @@ def plotea(Aperture,U0,limits_in,limits_out):
 def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
     '''
     # SOME COMMENTS ARE MISSING HERE
-
-    
     # Inputs:
     # field - complex field
     # z - propagation distance
@@ -119,9 +140,8 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
     dy_out = pixel_pitch_out[1] #Output Pixel Size Y
     
     M,N = np.shape(Field_Input)
-    k = (2*pi)/wavelength # Wave number of the ilumination source
+    k = (2*np.pi)/wavelength # Wave number of the ilumination source
     
-    output_z = z
 
     U0 = np.zeros((M,N),dtype='complex_')
     U1 = Field_Input  #This will be the hologram plane 
@@ -133,7 +153,7 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
     x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
     y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 
-    [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
+    [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord,indexing='xy')
 
 
     x_out_lim = dx_out*int(N/2)
@@ -148,13 +168,12 @@ def RS1(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out):
         x_fis_out = x_cord_out[x_sample]
         for y_sample in range(M):
             y_fis_out = y_cord_out[y_sample]
-            mr01 = np.sqrt(np.power(X_inp-x_fis_out,2)+np.power(Y_inp-y_fis_out,2)+(output_z)**2)
-            Obliquity = (output_z)/ mr01
+            mr01 = np.sqrt(np.power(x_fis_out-X_inp,2)+np.power(y_fis_out-Y_inp,2)+(z)**2)
+            Obliquity = (z)/ mr01
             kernel = np.exp(1j * k * mr01)/mr01
-            dif = 1j*k+(1/mr01)
+            dif = (1j*k)+(1/mr01)
             U0[y_sample,x_sample] = np.sum(U1 * dif * kernel * Obliquity * ds)
-    # U0 = U0 /(1j*wavelength)
-    # U0 = U0 / (-2*pi)
+    U0 = -U0/(2*np.pi)
     Viewing_window = [-x_out_lim,x_out_lim,-y_out_lim,y_out_lim]
     return U0,Viewing_window
 
@@ -253,15 +272,22 @@ k = 2*pi/wavelength # Wave number of the ilumination source
 
 #Simulation Control variables
 L = 5e-3
-output_z = 2e-3   # Z Component of the observation screen coordinates in m
-signal_size = 256  # Size of visualization 
-Magn = np.abs(L/output_z)
+output_z = 1e-3   # Z Component of the observation screen coordinates in m
+Magn = np.abs(L/output_z) # Magnification of the LM
+# Magn = 1.2
+
+
+signal_size = 128
 dx = dy = 3.3e-6 #Pixel Size
-dx_out = dy_out =  dx/Magn
+dx_out = dy_out =  dx # MULTIPLY BY THE MAGNIFICATION
+dx = dy = dx_out/Magn # COMMENT FOR RECONSTRUCTION
+
 M = N = signal_size # Control of the size of the matrices
-zcrit = np.sqrt(4*dx**2 - wavelength**2)*(N*dx + N*dx_out)/wavelength
+zcrit = np.sqrt(4*dx**2 - wavelength**2)*(N*dx + N*dx_out)/(2*wavelength)
+N_crit = 2 * wavelength*output_z/(np.sqrt(4*dx**2 - wavelength**2) * (dx + dx_out))
 
 print('La distancia crítica de propagación es: ', zcrit, 'm')
+print('El numero de pixeles requerido es: ', N_crit)
 
 x_center = signal_size/2# Optical...
 y_center = signal_size/2# ...axis of the system
@@ -273,55 +299,56 @@ y_inp_lim = dy*int(M/2)
 
 
 
-
-
-
-
-
-
-
 # Aperture defines the geometry of the apperture, for circular apperture use circ2D, for rectangular apperture use rect2D
 
 Aperture = circ2D(signal_size,Pradius,center=None) 
 # Aperture = rect2D(signal_size,10,10,center=None)
 
-
-
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
-# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\epiteliales_L=5_z=2.png").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
-# im = im.resize((signal_size,signal_size))
+im = im.resize((signal_size,signal_size))
 im = np.asarray(im)/255
+# im = 1-im # This line inverts 1 to 0 and visceversa to have illumination in the back
 
 
 
-
-
+M,N = np.shape(im)
 x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
 y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
-Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (L-output_z)**2)
+Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (output_z)**2)
 
+# ill = np.exp(1j*im)
 ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
+# ill = np.ones_like(im,dtype='complex')
 
 
-# U1 = Aperture.copy()
-U1 = im.copy() *ill
+U1 = im.copy() * ill
+# U1 = Aperture
 
-
-AS = angularSpectrum(Aperture,output_z,wavelength,dx,dy)
 start = time.time()
-U0,VW = RS1(im,output_z,wavelength,[dx,dy],[dx,dy])
+U0,VW = RS1(U1,L-output_z,wavelength,[dx,dy],[dx_out,dy_out])
 end = time.time()
 delta = end-start
+
 print('El tiempo de ejecucion es: ',delta)
-# U0,VW = RS1_size_variable(Aperture,output_z,wavelength,[dx,dy],[dx_out,dy_out],[2*signal_size,2*signal_size])
 
 VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
-figure = plotea(U1,U0,VW_in,VW)
+figure = ploty(U1,U0,VW_in,VW)
 
 
 
-Aperture,output_z,wavelength,[dx,dy],[dx_out,dy_out]
+
+
+
+
+
+
+
+
+
+
 
 
