@@ -4,22 +4,13 @@ Code developed by Tomás Vélez Acosta
 
 from math import pi
 import numpy as np
-import time
 from PIL import Image
 from matplotlib import pyplot as plt
 from scipy.interpolate import RegularGridInterpolator
 
-def ftx(input):
-    fts = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(input)))
-    return fts
-
 def phase(inp):
     out = np.angle(inp)+np.pi
     return(out)
-
-def iftx(input):
-    fts = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(input)))
-    return fts
 
 def amplitude (inp, log):
     '''
@@ -89,37 +80,49 @@ def imageShow (inp, title):
 
     return
 
-def resample(array,grad,pix_pit,Gamma=None):
-    shape = np.shape(array)
-    M = int(shape[0]*(1+grad*pix_pit[0]/np.pi))
-    N = int(shape[1]*(1+grad*pix_pit[1]/np.pi))
-    fts = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(array)))
-    fts = np.pad(fts,((M,M),(N,N)),'constant',constant_values=0)
-    out = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(fts)))
-    shape_out = np.shape(out)
-    if type(Gamma) != 'NoneType':
-        shape_Gamma = np.shape(Gamma)
-        dM = int((shape_out[0]-shape_Gamma[0])/2)
-        dN = int((shape_out[1]-shape_Gamma[1])/2)
-        Gamma = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(Gamma)))
-        if dM%2 == 1:
-            Gamma = np.pad(Gamma,((dM,dM),(dN,dN)),'constant',constant_values=0)
-        else:
-            Gamma = np.pad(Gamma,((dM,),(dN,)),'constant',constant_values=0)
-        Gamma = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(Gamma)))
-    return out,Gamma
+def plotea(U1,U0):
+    fig,axs = plt.subplots(1, 2)
+    # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
+    # axs = gs.subplots(sharex=False, sharey=True)
+    axs[0].imshow(intensity(U1,'False'), cmap='gray')
+    axs[0].set_title('Input')
+    # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
+    # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
+    axs[1].imshow(intensity(U0,False), cmap='gray')
+    axs[1].set_title('SAASM Output \n Input-Output distance = '+str(output_z)+' m')
+    plt.subplots_adjust(wspace=0.171)
+    plt.show()
 
-def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
+    return fig
+
+def ishow(Field):
+    fig,axs = plt.subplots(1, 2)
+    # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
+    # axs = gs.subplots(sharex=False, sharey=True)
+    axs[0].imshow(intensity(Field,'False'), cmap='gray')
+    axs[0].set_title('Intensity')
+    # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
+    # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
+    axs[1].imshow(phase(Field), cmap='gray')
+    axs[1].set_title('Phase')
+    plt.subplots_adjust(wspace=0.171)
+    plt.show()
+
+    return fig
+
+def CONV_SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     '''
-    # Function to diffract a complex field using the angular spectrum approach with a Semi-Analytical spherical wavefront.
-    # For further reference review: 
+    Function to diffract a complex field using the angular spectrum approach with a Semi-Analytical spherical wavefront.
+    This operator only works for convergent fields, for divergent fields see DIV_SAASM
+    For further reference review: https://opg.optica.org/josaa/abstract.cfm?uri=josaa-31-3-591 and https://doi.org/10.1117/12.2642760
 
     
-    # Inputs:
-    # field - complex field
-    # z - propagation distance
-    # wavelength - wavelength
-    # dx/dy - sampling pitches
+    ### Inputs:
+    * field - complex field to be diffracted
+    * z - propagation distance
+    * wavelength - wavelength of the light used
+    * pixel_pitch_in - Sampling pitches of the input field as a (2,) list
+    * pixel_pitch_out - Sampling pitches of the output field as a (2,) list
     '''
 
 
@@ -161,7 +164,7 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     # Initial interpolation for j=1
     max_grad_alpha = -kmax/(2*d*z) * np.amax(MR_in)
     pp1 = np.pi * pp0 /(pp0*max_grad_alpha+2*np.pi)
-    alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR_in)/(4*d*z))
+    alpha = np.exp(-1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR_in)/(4*d*z))
 
     #Interpolation of the input field Scipy
     xin = (x - (N / 2))*pp0
@@ -175,12 +178,8 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     X1,Y1 = np.meshgrid((x1 - (N2 / 2))*pp1, (y1 - (M2 / 2))*pp1,indexing='ij')
     inter = RegularGridInterpolator((xin,yin),field,bounds_error=False, fill_value=None)
     E_interpolated = inter((X1,Y1))
-    FE = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(E_interpolated)))
     MR1 = (X1**2 + Y1**2)
-    alpha = np.exp(1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR1)/(4*d*z))
-
-    # Interpolation using FFT
-    # E_interpolated,alpha = resample(field,max_grad_alpha,[pp0,pp0],Gamma=alpha)
+    alpha = np.exp(-1j* c * kmax * z)*kmax/(2j * d * z) * np.exp((1j * kmax * MR1)/(4*d*z))
     E_interpolated = E_interpolated - np.amin(E_interpolated)
     E_interpolated = E_interpolated/np.amax(E_interpolated)
 
@@ -189,11 +188,8 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     FE1 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift((np.divide(E_interpolated,alpha)))))
     #Slicing of the input field in the inner region where the field is valid
     half_size1 = [int(np.shape(FE1)[0]/2),int(np.shape(FE1)[1]/2)]
+    FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
 
-
-    # ----------------------CLIPPING OF THE FIELD----------------------------- 
-    # FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
-    FE1 = FE1[200:820,200:820] 
     
 
     '''IN THIS STEP THE SECOND FOURIER TRANSFORM IS CALCULATED. HERE THE COORDINATES BETA ARE RELEVANT
@@ -204,26 +200,23 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     pp2 = np.pi * pp1 /(pp1*max_grad_kernel+2*np.pi)
     pad2 = [int(np.shape(FE1)[0]*(1+max_grad_kernel*pp1/np.pi)/2),int(np.shape(FE1)[1]*(1+max_grad_kernel*pp1/np.pi)/2)]
     E2 = np.pad(FE1,((pad2[0],pad2[0]),(pad2[1],pad2[1])),'constant',constant_values=np.mean(FE1))
-    # E2 = FE1
     
-
-
     # Calculation of the oversampled kernel
-    M2,N2 = np.shape(E2)
-    x2 = np.arange(0,N2,1)
-    y2 = np.arange(0,M2,1)
+    M0,N0 = np.shape(E2)
+    x2 = np.arange(0,N0,1)
+    y2 = np.arange(0,M0,1)
     # If required, check the pixel size
-    X_out, Y_out = np.meshgrid((x2 - (N2 / 2))*pixel_pitch_out[0], (y2- (M2 / 2))*pixel_pitch_out[1], indexing='xy')
-    bX = -kmax * X_out / (2*d*z)
+    X_out, Y_out = np.meshgrid((x2 - (N0 / 2))*pixel_pitch_out[0], (y2- (M0 / 2))*pixel_pitch_out[1], indexing='xy')
+    bX = -kmax * X_out / (2*d*z)    
     bY = -kmax * Y_out / (2*d*z)
     Mbeta = np.sqrt(np.power(bX,2)+np.power(bY,2))
     kernel = np.exp(-1j * d * z * np.power(Mbeta,2)/(kmax))
 
 
-
-    FE2 = ftx(E2*kernel)
-    # half_size2 = [int(np.shape(FE2)[0]/2),int(np.shape(FE2)[1]/2)]
-    # FE2 = FE2[half_size2[0]-int(M2/2):half_size2[0]+int(M/2),half_size2[1]-int(N2/2):half_size2[1]+int(N/2)]
+    # Computation of the j=2 step
+    FE2 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(E2*kernel)))
+    half_size2 = [int(np.shape(FE2)[0]/2),int(np.shape(FE2)[1]/2)]
+    FE2 = FE2[half_size2[0]-int(M0/2):half_size2[0]+int(M0/2),half_size2[1]-int(N0/2):half_size2[1]+int(N0/2)]
 
     
 
@@ -244,10 +237,6 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     grad_h = np.sqrt(np.gradient(h)[0]**2 + np.gradient(h)[1]**2)
     
     
-    # Trial
-    E_npad = iftx(FE2 * np.exp(1j * z * h))
-    half_size3 = [int(np.shape(E_npad)[0]/2),int(np.shape(E_npad)[1]/2)]
-    E_npad = E_npad[half_size3[0]-int(M/2):half_size3[0]+int(M/2),half_size3[1]-int(N/2):half_size3[1]+int(N/2)]
     
     # Padding variables for j=3
     max_grad_h = np.amax(grad_h)
@@ -265,55 +254,25 @@ def SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     taylor_no_sup = (c*kmax + d *(MK_out**2)/kmax)
     spherical_ideal = np.sqrt(k_wl**2 - MK_out**2)
     h = spherical_ideal - taylor_no_sup
-    
-    E_out = iftx(E3 * np.exp(1j * z * h))
+
+    # Computation of the j=3 step
+    E_out = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(E3 * np.exp(1j * z * h))))
     half_size3 = [int(np.shape(E3)[0]/2),int(np.shape(E3)[1]/2)]
-    E_out = E_out[half_size3[0]-int(M/2):half_size3[0]+int(M/2),half_size3[1]-int(N/2):half_size3[1]+int(N/2)]
+    E_out = E_out[half_size3[0]-int(M2/2):half_size3[0]+int(M2/2),half_size3[1]-int(N2/2):half_size3[1]+int(N2/2)]
     
     
-    return E_npad
-
-def plotea(U1,U0):
-    fig,axs = plt.subplots(1, 2)
-    # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
-    # axs = gs.subplots(sharex=False, sharey=True)
-    axs[0].imshow(intensity(U1,'False'), cmap='gray')
-    axs[0].set_title('Input')
-    # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
-    # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
-    axs[1].imshow(intensity(U0,False), cmap='gray')
-    axs[1].set_title('SAASM \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
-    plt.subplots_adjust(wspace=0.171)
-    plt.show()
-
-    return fig
-
-def ishow(Field):
-    fig,axs = plt.subplots(1, 2)
-    # gs = fig.add_gridspec(1,3, hspace=0, wspace=0)
-    # axs = gs.subplots(sharex=False, sharey=True)
-    axs[0].imshow(intensity(Field,'False'), cmap='gray')
-    axs[0].set_title('Intensity')
-    # axs[2].imshow(amplitude(U0,'False'), cmap='gray',extent=limits_out)
-    # axs[2].set_title('Amplitude Pattern \n Screen-Aperture distance = '+str(output_z)+' m \n Aperture radius = ' +str(radius*1000) + ' mm '+'(Coordinates in [m])')
-    axs[1].imshow(phase(Field), cmap='gray')
-    axs[1].set_title('Phase')
-    plt.subplots_adjust(wspace=0.171)
-    plt.show()
-
-    return fig
-
+    return E_out
 
 
 signal_size = 512 # Size of visualization
 Magn = 1e0
-dx = dy = 3.3e-6 #Pixel Size
+dx = dy = 5e-6 #Pixel Size
 dx_out = dy_out = dx*Magn
 M = N = signal_size # Control of the size of the matrices
 
 x_center = signal_size/2# Optical...
 y_center = signal_size/2# ...axis of the system
-radius = 5e-5 # Radius of the aperture in meters
+radius = 1e-5 # Radius of the aperture in meters
 Pradius = int(radius/dx) #Radius of the aperture in pixels
 
 x_inp_lim = dx*int(N/2)
@@ -321,11 +280,11 @@ y_inp_lim = dy*int(M/2)
 
 
 # Light source+
-wavelength = 6.32e-7 # Wavelength of the illumination Source
+wavelength = 4.31e-7 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
 
 
-output_z = 7e-3   # Z Component of the observation screen coordinates
+output_z = 40e-3   # Z Component of the observation screen coordinates
 # output_z = 2.5e-2   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
@@ -334,26 +293,27 @@ Input_Z = 0 # Z Component of the aperture coordinates
 
  
 
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF_EXP.png").convert('L')
 
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre VII\Advanced Project I\Holograms\0106\USINTFINraw.png").convert('L')
 # im = circ2D(signal_size,Pradius,center=None)
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
 
 im = im.resize((signal_size,signal_size))
 im = np.asarray(im)/255
-# im = np.pad(im,1024)
+# im = 1 - im
 U1 = im.copy()
 
 
-U0_temp_pure = SAASM(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
+U0_temp_pure = CONV_SAASM(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
 U0_temp = intensity(U0_temp_pure,False)
 U0_temp = Image.fromarray(U0_temp)
 U0_temp = np.asarray(U0_temp.resize((signal_size,signal_size)))
-U0 = SAASM(U0_temp, -output_z, wavelength, [dx_out,dy_out],[dx,dy])
+U0 = CONV_SAASM(U0_temp, -output_z, wavelength, [dx_out,dy_out],[dx,dy])
 VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
 
-plotea(U0,U0_temp_pure)
+plotea(U1,U0_temp_pure)
 
 
 
