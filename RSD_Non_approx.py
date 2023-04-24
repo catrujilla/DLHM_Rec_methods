@@ -251,10 +251,10 @@ y_inp_lim = dy*int(M/2)
 
 #---------------------------Choosing the image to diffract----------------------------
 # im = Aperture.copy()
-# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF_EXP.png").convert('L')
+im = Image.open(r"USAF_EXP.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\epiteliales_L=5_z=2.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
 im = im.resize((signal_size,signal_size))
 im = np.asarray(im)/255

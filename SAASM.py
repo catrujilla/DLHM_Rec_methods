@@ -293,7 +293,7 @@ Input_Z = 0 # Z Component of the aperture coordinates
 
  
 
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF_EXP.png").convert('L')
+im = Image.open(r"USAF_EXP.png").convert('L')
 
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre VII\Advanced Project I\Holograms\0106\USINTFINraw.png").convert('L')
 # im = circ2D(signal_size,Pradius,center=None)
