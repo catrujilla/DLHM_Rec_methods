@@ -188,7 +188,7 @@ def CONV_SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     FE1 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift((np.divide(E_interpolated,alpha)))))
     #Slicing of the input field in the inner region where the field is valid
     half_size1 = [int(np.shape(FE1)[0]/2),int(np.shape(FE1)[1]/2)]
-    FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
+    # FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
 
     
 
@@ -224,9 +224,9 @@ def CONV_SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     TO FIND NUMERICALLY THE MAXIMUM GRADIENT OF ITS ARGUMENT, THEN, A PADDING OF FE2 IS DONE AND FINALLY H
     IS RESAMPLED IN TERMS OF FE2'''
     # Calculation of the superior order phases
-    M3,N3 = np.shape(FE2)
-    fx_out = np.fft.fftshift(np.fft.fftfreq(N3,pixel_pitch_out[0]))
-    fy_out = np.fft.fftshift(np.fft.fftfreq(M3,pixel_pitch_out[1]))
+    Mfin,Nfin = np.shape(FE2)
+    fx_out = np.fft.fftshift(np.fft.fftfreq(Nfin,pixel_pitch_out[0]))
+    fy_out = np.fft.fftshift(np.fft.fftfreq(Mfin,pixel_pitch_out[1]))
     FX_out, FY_out = np.meshgrid(fx_out, fy_out, indexing='xy')
     KX_out = FX_out * 2 * pi
     KY_out = FY_out * 2 * pi
@@ -258,16 +258,16 @@ def CONV_SAASM(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     # Computation of the j=3 step
     E_out = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(E3 * np.exp(1j * z * h))))
     half_size3 = [int(np.shape(E3)[0]/2),int(np.shape(E3)[1]/2)]
-    E_out = E_out[half_size3[0]-int(M2/2):half_size3[0]+int(M2/2),half_size3[1]-int(N2/2):half_size3[1]+int(N2/2)]
+    E_out = E_out[half_size3[0]-int(Mfin/2):half_size3[0]+int(Mfin/2),half_size3[1]-int(Nfin/2):half_size3[1]+int(Nfin/2)]
     
     
     return E_out
 
 
 signal_size = 512 # Size of visualization
-Magn = 1e0
-dx = dy = 5e-6 #Pixel Size
-dx_out = dy_out = dx*Magn
+Magn = 10e0
+dx = dy = 5.86e-6 #Pixel Size
+dx_out = dy_out = dx/Magn
 M = N = signal_size # Control of the size of the matrices
 
 x_center = signal_size/2# Optical...
@@ -280,11 +280,11 @@ y_inp_lim = dy*int(M/2)
 
 
 # Light source+
-wavelength = 4.31e-7 # Wavelength of the illumination Source
+wavelength = 633e-9 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
 
 
-output_z = 40e-3   # Z Component of the observation screen coordinates
+output_z = 21e-3   # Z Component of the observation screen coordinates
 # output_z = 2.5e-2   # Z Component of the observation screen coordinates
 Input_Z = 0 # Z Component of the aperture coordinates
 
@@ -293,9 +293,9 @@ Input_Z = 0 # Z Component of the aperture coordinates
 
  
 
-im = Image.open(r"USAF_EXP.png").convert('L')
+# im = Image.open(r"USAF_EXP.png").convert('L')
 
-# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre VII\Advanced Project I\Holograms\0106\USINTFINraw.png").convert('L')
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF_FULL_HOLOGRAM_SIMULATED.jpg").convert('L')
 # im = circ2D(signal_size,Pradius,center=None)
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
@@ -303,19 +303,34 @@ im = Image.open(r"USAF_EXP.png").convert('L')
 im = im.resize((signal_size,signal_size))
 im = np.asarray(im)/255
 # im = 1 - im
-U1 = im.copy()
+
+M,N = np.shape(im)
+x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
+y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
+[X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
+Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (5e-3)**2)
+# ill = np.exp(1j*im)
+# ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
+ill = np.ones_like(im,dtype='complex')
+
+U1 = im.copy()*ill
 
 
 U0_temp_pure = CONV_SAASM(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
-U0_temp = intensity(U0_temp_pure,False)
-U0_temp = Image.fromarray(U0_temp)
-U0_temp = np.asarray(U0_temp.resize((signal_size,signal_size)))
-U0 = CONV_SAASM(U0_temp, -output_z, wavelength, [dx_out,dy_out],[dx,dy])
+# U0_temp = intensity(U0_temp_pure,False)
+# U0_temp = Image.fromarray(U0_temp)
+# U0_temp = np.asarray(U0_temp.resize((signal_size,signal_size)))
+# U0 = CONV_SAASM(U0_temp, -output_z, wavelength, [dx_out,dy_out],[dx,dy])
 VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
 
-plotea(U1,U0_temp_pure)
 
-
+U0_temp_pure = U0_temp_pure[400:1730,400:1730] # ERASE FOR GENERAL RESULTS
+# plotea(U1,U0_temp_pure)
+inte = intensity(U0_temp_pure,False)
+inte = inte.astype(np.uint8)
+output = Image.fromarray(inte)
+output = output.convert("L")
+output.save(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\Final Presentation\SAASM.bmp")
 
 
 

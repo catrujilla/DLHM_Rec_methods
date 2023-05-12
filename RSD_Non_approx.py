@@ -214,25 +214,27 @@ def angularSpectrum(field, z, wavelength, dx, dy):
 
 
 # Light source
-wavelength = 6.328e-07 # Wavelength of the illumination Source
+wavelength = 4.338e-07 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
 
 #Simulation Control variables
-L = 5e-3
-output_z = 2e-3   # Z Component of the observation screen coordinates in m
-Magn = np.abs(L/output_z) # Magnification of the LM
-# Magn = 1.2
+L = 100e-3
+output_z = 15e-3   # Z Component of the observation screen coordinates in m
+prop_z = 100e-6
+# Magn = np.abs(L/output_z) # Magnification of the LM
+Magn = 1
 
 
-signal_size = 64
+signal_size = 128
 OutputShape = 128
-dx = dy = 3.3e-6 #Pixel Size.
-dx_out = dy_out =  dx # MULTIPLY BY THE MAGNIFICATION
-dx = dy = dx_out/Magn # COMMENT FOR RECONSTRUCTION
+# dx = dy = 3.3e-6 #Pixel Size.
+dx = dy = 1.69e-3 / signal_size
+dx_out = dy_out =  dx/Magn # MULTIPLY BY THE MAGNIFICATION
+# dx = dy = dx_out/Magn # COMMENT FOR RECONSTRUCTION
 
 M = N = signal_size # Control of the size of the matrices
 zcrit = np.sqrt(4*dx**2 - wavelength**2)*(N*dx + N*dx_out)/(2*wavelength)
-N_crit = 2 * wavelength*output_z/(np.sqrt(4*dx**2 - wavelength**2) * (dx + dx_out))
+N_crit = 2 * wavelength*prop_z/(np.sqrt(4*dx**2 - wavelength**2) * (dx + dx_out))
 
 print('La distancia crítica de propagación es: ', zcrit, 'm')
 print('El numero de pixeles requerido es: ', N_crit)
@@ -251,10 +253,10 @@ y_inp_lim = dy*int(M/2)
 
 #---------------------------Choosing the image to diffract----------------------------
 # im = Aperture.copy()
-im = Image.open(r"USAF_EXP.png").convert('L')
+# im = Image.open(r"USAF_EXP.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\epiteliales_L=5_z=2.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
-# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
 im = im.resize((signal_size,signal_size))
 im = np.asarray(im)/255
@@ -266,12 +268,10 @@ M,N = np.shape(im)
 x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
 y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
-Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (output_z)**2)
+Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (100e-2)**2)
 # ill = np.exp(1j*im)
-# ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
-ill = np.ones_like(im,dtype='complex')
-
-
+ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
+# ill = np.ones_like(im,dtype='complex')
 
 
 
@@ -285,7 +285,7 @@ U1 = im.copy() * ill
 OutputShape = (OutputShape,OutputShape)
 
 start = time.time()
-U0,VW = RS1_Free(U1,L-output_z,wavelength,[dx,dy],[dx_out,dy_out],OutputShape)
+U0,VW = RS1_Free(U1,prop_z,wavelength,[dx,dy],[dx_out,dy_out],OutputShape)
 # U0,VW = RS1_Free(U1,-30e-3,4.31e-7,[40e-3,40e-3],[20e-3,20e-3],OutputShape)
 end = time.time()
 delta = end-start
@@ -298,16 +298,3 @@ figure = ploty(U1,U0,VW_in,VW)
 # Reconstruction,VW_sample = RS1(U0,output_z-L,wavelength,[dx_out,dy_out],[dx,dy])
 
 # figure2 = ploty(U0,Reconstruction,VW,VW_sample)
-
-
-
-
-
-
-
-
-
-
-
-
-
