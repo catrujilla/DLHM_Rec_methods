@@ -1,6 +1,6 @@
 Steps to install pycuda on Windows 10 (Hipothezised) and 11 (Tested):
 1. Install Anaconda, latest version recommended, (should work with previous versions too)
-2. Install Visual Studio (DIFFERENT FROM VISUAL STUDIO CODE) version 2015-2019 (I used 2019 version)
+2. Install Visual Studio (DIFFERENT FROM VISUAL STUDIO CODE) version 2015-2019 (I used 2019 Community version)
 NOTE: In the Visual Studio installation, ensure to add .Net framework 3.5 and MSVCv140 - VS2015
 3. Add the cl.exe file location to PATH environment variable (Usually <C:\Program Files\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64>)
 4. Create a Python environment using Anaconda prompt in Python 3.7 (conda create -n <Environment_name> python==3.7)
