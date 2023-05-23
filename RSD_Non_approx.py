@@ -5,6 +5,8 @@ Code developed by Tomás Vélez Acosta
 from math import pi
 import numpy as np
 from matplotlib import pyplot as plt
+import plotly.express as px
+from plotly.subplots import make_subplots
 from PIL import Image
 import time
 
@@ -171,12 +173,15 @@ def RS1_Free(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out,Output_shap
     for x_sample in range(OutputShape[0]):
         x_fis_out = x_cord_out[x_sample]
         for y_sample in range(OutputShape[1]):
+            # start = time.time()
             y_fis_out = y_cord_out[y_sample]
             mr01 = np.sqrt(np.power(x_fis_out-X_inp,2)+np.power(y_fis_out-Y_inp,2)+(z)**2)
             Obliquity = (z)/ mr01
             kernel = np.exp(1j * k * mr01)/mr01
             dif = (1j*k)+(1/mr01)
             U0[y_sample,x_sample] = np.sum(U1 * dif * kernel * Obliquity * ds)
+            # stop = time.time()
+            # print('Tiempo de ejecución: ', 1000*(stop-start))
     U0 = -U0/(2*np.pi)
     Viewing_window = [-x_out_lim,x_out_lim,-y_out_lim,y_out_lim]
     return U0,Viewing_window
@@ -212,35 +217,62 @@ def angularSpectrum(field, z, wavelength, dx, dy):
 	
     return out
 
+def ploty2(Input,Output):
+    fig,axs = plt.subplots(1,2)
+
+    axs[0].imshow(intensity(Input,'False'), cmap='gray')
+    axs[0].set_title('Input Intensity')
+    
+    axs[1].imshow(intensity(Output,'False'), cmap='gray')
+    axs[1].set_title('Output Intensity')
+
+    plt.subplots_adjust(wspace=0.2)
+    plt.subplots_adjust(hspace=0.4)
+    plt.show()
+
+def ploty3(Input,Output):
+    fig,axs = plt.subplots(1,2)
+
+    axs[0].imshow(phase(Input), cmap='gray')
+    axs[0].set_title('Input phase')
+    
+    axs[1].imshow(phase(Output), cmap='gray')
+    axs[1].set_title('Output phase')
+
+    plt.subplots_adjust(wspace=0.2)
+    plt.subplots_adjust(hspace=0.4)
+    plt.show()
 
 # Light source
-wavelength = 4.338e-07 # Wavelength of the illumination Source
+wavelength = 6.33e-07 # Wavelength of the illumination Source
 k = 2*pi/wavelength # Wave number of the ilumination source
+prop_z = 3.5e-3
+Magn = 1
+dx = dy = 3.3e-6
+signal_size = 128
+OutputShape = 314
+
+
 
 #Simulation Control variables
 L = 100e-3
 output_z = 15e-3   # Z Component of the observation screen coordinates in m
-prop_z = 100e-6
-# Magn = np.abs(L/output_z) # Magnification of the LM
-Magn = 1
 
 
-signal_size = 128
-OutputShape = 128
+
+
+
 # dx = dy = 3.3e-6 #Pixel Size.
-dx = dy = 1.69e-3 / signal_size
-dx_out = dy_out =  dx/Magn # MULTIPLY BY THE MAGNIFICATION
-# dx = dy = dx_out/Magn # COMMENT FOR RECONSTRUCTION
+
+dx_out = dy_out =  Magn*(signal_size*dx)/OutputShape # MULTIPLY BY THE MAGNIFICATION
+# dx_out = dy_out = dx*Magn # COMMENT FOR RECONSTRUCTION
 
 M = N = signal_size # Control of the size of the matrices
 zcrit = np.sqrt(4*dx**2 - wavelength**2)*(N*dx + N*dx_out)/(2*wavelength)
-N_crit = 2 * wavelength*prop_z/(np.sqrt(4*dx**2 - wavelength**2) * (dx + dx_out))
 
-print('La distancia crítica de propagación es: ', zcrit, 'm')
-print('El numero de pixeles requerido es: ', N_crit)
 
 # Aperture defines the geometry of the apperture, for circular apperture use circ2D, for rectangular apperture use rect2D
-radius = 3.3e-6 # Radius of the aperture in meters
+radius = 7*dx # Radius of the aperture in meters
 Pradius = int(radius/dx) #Radius of the aperture in pixels
 Aperture = circ2D(signal_size,Pradius,center=None) 
 # Aperture = rect2D(signal_size,10,10,center=None)
@@ -252,14 +284,14 @@ y_inp_lim = dy*int(M/2)
 
 
 #---------------------------Choosing the image to diffract----------------------------
-# im = Aperture.copy()
+im = Aperture.copy()
 # im = Image.open(r"USAF_EXP.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\epiteliales_L=5_z=2.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
+# im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
-im = im.resize((signal_size,signal_size))
-im = np.asarray(im)/255
+# im = im.resize((signal_size,signal_size))
+# im = np.asarray(im)/255
 # im = 1-im # This line inverts 1 to 0 and visceversa to have illumination in the back
 
 
@@ -269,14 +301,14 @@ x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
 y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
 Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (100e-2)**2)
-# ill = np.exp(1j*im)
-ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
+ill = np.exp(1j*im)
+# ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
 # ill = np.ones_like(im,dtype='complex')
 
 
 
 U1 = im.copy() * ill
-# U1 = Aperture * ill
+
 
 
 
@@ -293,7 +325,12 @@ delta = end-start
 print('El tiempo de ejecucion es: ',delta)
 
 VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
-figure = ploty(U1,U0,VW_in,VW)
+# figure = ploty(U1,U0,VW_in,VW)
+
+
+
+
+figure = ploty3(U1,U0)
 
 # Reconstruction,VW_sample = RS1(U0,output_z-L,wavelength,[dx_out,dy_out],[dx,dy])
 
