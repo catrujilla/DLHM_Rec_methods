@@ -29,7 +29,7 @@ def fmincon(minfunc, Constraints, Initial_values):
 z = 3.5e-3
 wvl = 6.33e-7
 in_size = [128,128]
-Magn = 0.5
+Magn = 1
 ppitch = 3.3e-6
 coef = 2 * ppitch**2 * (Magn+Magn**2)/wvl
 

@@ -250,7 +250,7 @@ prop_z = 3.5e-3
 Magn = 1
 dx = dy = 3.3e-6
 signal_size = 128
-OutputShape = 314
+OutputShape = 313
 
 
 
@@ -284,14 +284,15 @@ y_inp_lim = dy*int(M/2)
 
 
 #---------------------------Choosing the image to diffract----------------------------
-im = Aperture.copy()
+# im = Aperture.copy()
+im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\Final Presentation\arago.bmp").convert('L')
 # im = Image.open(r"USAF_EXP.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\epiteliales_L=5_z=2.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAFFULL.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\USAF-1951.svg.png").convert('L')
-# im = im.resize((signal_size,signal_size))
-# im = np.asarray(im)/255
+im = im.resize((signal_size,signal_size))
+im = np.asarray(im)/255
 # im = 1-im # This line inverts 1 to 0 and visceversa to have illumination in the back
 
 
@@ -301,9 +302,9 @@ x_cord = np.linspace(-x_inp_lim , x_inp_lim , num = N)
 y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
 Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (100e-2)**2)
-ill = np.exp(1j*im)
+# ill = np.exp(1j*im)
 # ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
-# ill = np.ones_like(im,dtype='complex')
+ill = np.ones_like(im,dtype='complex')
 
 
 
@@ -330,7 +331,7 @@ VW_in = [-x_inp_lim,x_inp_lim,-y_inp_lim,y_inp_lim]
 
 
 
-figure = ploty3(U1,U0)
+figure = ploty2(U1,U0)
 
 # Reconstruction,VW_sample = RS1(U0,output_z-L,wavelength,[dx_out,dy_out],[dx,dy])
 
