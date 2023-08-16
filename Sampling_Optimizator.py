@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import NonlinearConstraint 
 from scipy import optimize
 from timeit import default_timer as timer
@@ -26,10 +25,10 @@ def fmincon(minfunc, Constraints, Initial_values):
     return Cy_opt
 
 
-z = 3.5e-3
-wvl = 6.33e-7
-in_size = [128,128]
-Magn = 1
+z = 10e-3
+wvl = 4.11e-7
+in_size = [200,200]
+Magn = 1.5
 ppitch = 3.3e-6
 coef = 2 * ppitch**2 * (Magn+Magn**2)/wvl
 

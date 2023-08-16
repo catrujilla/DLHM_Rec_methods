@@ -170,9 +170,9 @@ def RS1_Free(Field_Input,z,wavelength,pixel_pitch_in,pixel_pitch_out,Output_shap
 
     
     # The first pair of loops ranges over the points in the output plane in order to determine r01
-    for x_sample in range(OutputShape[0]):
+    for x_sample in range(Output_shape[0]):
         x_fis_out = x_cord_out[x_sample]
-        for y_sample in range(OutputShape[1]):
+        for y_sample in range(Output_shape[1]):
             # start = time.time()
             y_fis_out = y_cord_out[y_sample]
             mr01 = np.sqrt(np.power(x_fis_out-X_inp,2)+np.power(y_fis_out-Y_inp,2)+(z)**2)
@@ -244,13 +244,23 @@ def ploty3(Input,Output):
     plt.show()
 
 # Light source
-wavelength = 6.33e-07 # Wavelength of the illumination Source
-k = 2*pi/wavelength # Wave number of the ilumination source
-prop_z = 3.5e-3
-Magn = 1
-dx = dy = 3.3e-6
+wavelength = 4.11e-07 # Wavelength of the illumination Source [m]
+k = 2*pi/wavelength # Wave number of the ilumination source [rad/m]
+Cam_Width = 1e-3
+L = 30e-3
+z_micro = 20e-3
+prop_z = L-z_micro
+Magn = L/z_micro
+Sample_Width = Cam_Width/Magn
+#-------------------Sampling Parameters for simulation----------------------------
 signal_size = 128
-OutputShape = 313
+output_size = 324
+
+dx = dy = Cam_Width/(Magn*signal_size)
+dx_out = (wavelength/2)*(np.sqrt(Sample_Width**2 * (1+Magn**2)+prop_z**2)/(Sample_Width*(1+Magn)))
+# dx_out = dy_out = Width/output_size
+print('dx',dx*1e6,' um')
+print('dx_out',dx_out*1e6,' um')
 
 
 
@@ -262,30 +272,16 @@ output_z = 15e-3   # Z Component of the observation screen coordinates in m
 
 
 
-# dx = dy = 3.3e-6 #Pixel Size.
-
-dx_out = dy_out =  Magn*(signal_size*dx)/OutputShape # MULTIPLY BY THE MAGNIFICATION
-# dx_out = dy_out = dx*Magn # COMMENT FOR RECONSTRUCTION
-
-M = N = signal_size # Control of the size of the matrices
-zcrit = np.sqrt(4*dx**2 - wavelength**2)*(N*dx + N*dx_out)/(2*wavelength)
-
-
-# Aperture defines the geometry of the apperture, for circular apperture use circ2D, for rectangular apperture use rect2D
-radius = 7*dx # Radius of the aperture in meters
-Pradius = int(radius/dx) #Radius of the aperture in pixels
-Aperture = circ2D(signal_size,Pradius,center=None) 
-# Aperture = rect2D(signal_size,10,10,center=None)
 
 
 
-x_inp_lim = dx*int(N/2)
-y_inp_lim = dy*int(M/2)
+x_inp_lim = dx*int(signal_size/2)
+y_inp_lim = dy*int(signal_size/2)
 
 
 #---------------------------Choosing the image to diffract----------------------------
 # im = Aperture.copy()
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\Final Presentation\arago.bmp").convert('L')
+im = Image.open(r"USAFFULL-1.bmp").convert('L')
 # im = Image.open(r"USAF_EXP.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\epiteliales_L=5_z=2.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\ep.png").convert('L')
@@ -303,7 +299,7 @@ y_cord = np.linspace(-y_inp_lim , y_inp_lim , num = M)
 [X_inp,Y_inp] = np.meshgrid(x_cord,y_cord)
 Rinp = np.sqrt(np.power(X_inp,2)+np.power(Y_inp,2) + (100e-2)**2)
 # ill = np.exp(1j*im)
-# ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
+ill = np.ones_like(im,dtype='complex') * np.exp(1j*k*Rinp)/Rinp
 ill = np.ones_like(im,dtype='complex')
 
 
@@ -315,10 +311,10 @@ U1 = im.copy() * ill
 
 
 
-OutputShape = (OutputShape,OutputShape)
+output_size = (output_size,output_size)
 
 start = time.time()
-U0,VW = RS1_Free(U1,prop_z,wavelength,[dx,dy],[dx_out,dy_out],OutputShape)
+U0,VW = RS1_Free(U1,prop_z,wavelength,[dx,dy],[dx_out,dy_out],output_size)
 # U0,VW = RS1_Free(U1,-30e-3,4.31e-7,[40e-3,40e-3],[20e-3,20e-3],OutputShape)
 end = time.time()
 delta = end-start

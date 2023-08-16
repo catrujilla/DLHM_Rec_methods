@@ -469,6 +469,12 @@ def CONV_SAASM_V3(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     fx1 = np.fft.fftshift(np.fft.fftfreq(N2,pp1))
     fy1 = np.fft.fftshift(np.fft.fftfreq(M2,pp1))
     FX1, FY1 = np.meshgrid(fx1, fy1, indexing='xy')
+    # THIS LINEs ARE FOR TRIALS ONLY
+    X1 = Y_in
+    Y1 = X_in
+    FX1 = FX
+    FY1 = FY
+    #_______________________________
     KX1 = FX1 * 2 * pi
     KY1 = FY1 * 2 * pi
     MK1 = np.sqrt(KX1**2 + KY1**2)
@@ -493,12 +499,8 @@ def CONV_SAASM_V3(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     #Padding variables for j=2
     # max_grad_kernel = np.amax(Mbeta)
     
-    
     # Computation of the j=1 step
     FE1 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(EM1)))
-    #Slicing of the input field in the inner region where the field is valid
-    # half_size1 = [int(np.shape(FE1)[0]/2),int(np.shape(FE1)[1]/2)]
-    # FE1 = FE1[half_size1[0]-int(M/2):half_size1[0]+int(M/2),half_size1[1]-int(N/2):half_size1[1]+int(N/2)]
 
     
 
@@ -516,13 +518,13 @@ def CONV_SAASM_V3(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     bX = -kmax * X_out / (2*d*z)    
     bY = -kmax * Y_out / (2*d*z)
     Mbeta = np.sqrt(np.power(bX,2)+np.power(bY,2))
-    # kernel = np.exp(-1j * d * z * np.power(Mbeta,2)/(kmax))
-    kernel = np.exp(-1j * kmax * np.power(Mrho,2)/(4 * d * z))
+    kernel = np.exp(-1j * d * z * np.power(Mbeta,2)/(kmax))
+    # kernel = np.exp(-1j * kmax * np.power(Mrho,2)/(4 * d * z))
     EM2 = FE1*kernel
 
     # Computation of the j=2 step
     FE2 = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(EM2)))
-    half_size2 = [int(np.shape(FE2)[0]/2),int(np.shape(FE2)[1]/2)]
+    # half_size2 = [int(np.shape(FE2)[0]/2),int(np.shape(FE2)[1]/2)]
     # FE2 = FE2[half_size2[0]-int(M/2):half_size2[0]+int(M/2),half_size2[1]-int(N/2):half_size2[1]+int(N/2)]
     
 
@@ -552,10 +554,10 @@ def CONV_SAASM_V3(field, z, wavelength, pixel_pitch_in,pixel_pitch_out):
     phase_h = np.exp(1j * z * h)
     EM3 = FE2 * phase_h
     E_out = np.fft.ifftshift(np.fft.ifft2(np.fft.fftshift(EM3)))
-    half_size3 = [int(np.shape(E_out)[0]/2),int(np.shape(E_out)[1]/2)]
+    # half_size3 = [int(np.shape(E_out)[0]/2),int(np.shape(E_out)[1]/2)]
     # E_out = E_out[half_size3[0]-int(M/2):half_size3[0]+int(M/2),half_size3[1]-int(N/2):half_size3[1]+int(N/2)]
     # E_out = E_out[half_size3[0]-int(5017/2):half_size3[0]+int(5017/2),half_size3[1]-int(5017/2):half_size3[1]+int(5017/2)]
-    print('Output pixel pitch: ',pp1* 10**6,'um')
+    print('Output pixel pitch: ',pixel_pitch_out[0]* 10**6,'um')
     return E_out
 
 
@@ -619,7 +621,7 @@ Input_Z = 0 # Z Component of the aperture coordinates
 # im = Image.open(r"USAF_EXP.png").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre X\Holo_USAFFULL-1_633_1000_5_3_3_rec__1100.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre X\Holo_USAFFULL-1_633_1000_5_3_3_rec__1100.bmp").convert('L')
-im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre X\HIGH_NA.jpg").convert('L')
+im = Image.open(r"F:\OneDrive - Universidad EAFIT\Semestre X\TDG\Images\HIGH_NA.jpg").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\Final Presentation\contrast2.bmp").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\Final Presentation\arago.bmp").convert('L')
 # im = Image.open(r"D:\OneDrive - Universidad EAFIT\Semestre IX\Advanced Project 2\Final Presentation\Holofase.bmp").convert('L')
@@ -652,7 +654,7 @@ output_zs = np.linspace(0.5e-3,2e-3,10)
 #     ishow(U0_temp_pure,title=title)
 
 
-U0_temp_pure = CONV_SAASM_V2(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
+U0_temp_pure = CONV_SAASM_V3(U1, output_z, wavelength, [dx,dy],[dx_out,dy_out])
 # U0_temp = intensity(U0_temp_pure,False)
 # U0_temp = Image.fromarray(U0_temp)
 # U0_temp = np.asarray(U0_temp.resize((signal_size,signal_size)))
